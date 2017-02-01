@@ -24,7 +24,7 @@ def generate_pickle_file(target_file, pickle_file_name):
                 except Exception as e:
                     pass
                     print e
-                year[day].append((item['score'], item['ups'], item['controversiality']))
+                year[day].append((item.get('score', 0), item.get('ups', 0), item.get('controversiality', 0)))
     with file(pickle_file_name, 'w') as outfile:
         pickle.dump(year, outfile)
     return year
