@@ -8,14 +8,14 @@ from datetime import datetime
 import pickle
 import os
 import argparse
+import gzip
 
 VERSION = '1.2.0'
 
 
 def generate_pickle_file(target_file, pickle_file_name):
     """Generate a pickle file and return some data about that the_donald's scores."""
-    infile = open(target_file, 'r')
-
+    infile = gzip.open(target_file, 'rb')
     year = defaultdict(list)
     for line in infile:
         if line.find('The_Donald') > -1:  # We assume this case
