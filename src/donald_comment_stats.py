@@ -38,32 +38,47 @@ def generate_pickle_file(target_file, pickle_file_name):
     return year
 
 
+def analyze_file(target_dump_file):
+        target_base = os.path.basename(target_dump_file)
+        target_pickle_file = '../pickles/{}.{}.pickle'.format(target_base, VERSION)
+
+        if not os.path.isfile(target_pickle_file):
+            year = generate_pickle_file(target_dump_file, target_pickle_file)
+        else:
+            with file(target_pickle_file, 'r') as infile:
+                year = pickle.load(infile)
+
+        json_obj = {}
+        for key, value in year.iteritems():
+            num_comments = len(value)
+            if num_comments > 0:
+                json_obj[key] = {
+                    'avg_score': reduce(lambda x, y: x + y['score'], value, 0) / num_comments,
+                    'avg_ups': reduce(lambda x, y: x + y['ups'], value, 0) / num_comments,
+                    'avg_contro': reduce(lambda x, y: x + y['controversiality'], value, 0) / num_comments,
+                    'total_comments': num_comments,
+                    'num_authors': len(set([_['author'] for _ in value]))
+                }
+
+        with file('../output/{}.{}.synopsis.json'.format(target_base, VERSION), 'w') as outfile:
+            json.dump(json_obj, outfile, indent=3)
+        return json_obj
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some reddit dumps')
     parser.add_argument('file', type=str, help='a file to load')
     args = parser.parse_args()
 
     target_dump_file = args.file
-    target_base = os.path.basename(target_dump_file)
-    target_pickle_file = '../pickles/{}.{}.pickle'.format(target_base, VERSION)
-
-    if not os.path.isfile(target_pickle_file):
-        year = generate_pickle_file(target_dump_file, target_pickle_file)
+    if target_dump_file[-1] == '/':
+        import pdb; pdb.set_trace()
+        json_obj = {}
+        for item in os.listdir(target_dump_file):
+            if item[-2:].lower() == 'gz':
+                summary = analyze_file(os.path.join(target_dump_file, item))
+                json_obj.update(summary)  # TODO: Check if some days are overlapping
+        with open('output.json', 'w') as outfile:
+            json.dump(json_obj, outfile, indent=3)
     else:
-        with file(target_pickle_file, 'r') as infile:
-            year = pickle.load(infile)
-
-    json_obj = {}
-    for key, value in year.iteritems():
-        num_comments = len(value)
-        if num_comments > 0:
-            json_obj[key] = {
-                'avg_score': reduce(lambda x, y: x + y['score'], value, 0) / num_comments,
-                'avg_ups': reduce(lambda x, y: x + y['ups'], value, 0) / num_comments,
-                'avg_contro': reduce(lambda x, y: x + y['controversiality'], value, 0) / num_comments,
-                'total_comments': num_comments,
-                'num_authors': len(set([_['author'] for _ in value]))
-            }
-
-    with file('../output/{}.{}.synopsis.json'.format(target_base, VERSION), 'w') as outfile:
-        json.dump(json_obj, outfile, indent=3)
+        analyze_file(target_dump_file)
